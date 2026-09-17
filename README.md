@@ -217,5 +217,5 @@ extension itself runs inside Safari's extension process.
 
 ## License
 
-No license is included yet. Add one before publishing or accepting external
-contributions.
+This project is released without restrictions. You may use, modify, and
+distribute it freely, including for commercial purposes.
