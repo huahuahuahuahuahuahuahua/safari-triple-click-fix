@@ -9,7 +9,7 @@ import Cocoa
 import SafariServices
 import WebKit
 
-let extensionBundleIdentifier = "-.triple-click-fix.Extension"
+let extensionBundleIdentifier = "com.bangcheng.tripleclickfix.Extension"
 
 class ViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHandler {
 

@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "三击选段修复",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "修复 Safari 三击选段时复制末尾多余换行，以及选区高亮铺满空白区域的问题。",
+        "description": "Description of what the extension does."
+    }
+}
