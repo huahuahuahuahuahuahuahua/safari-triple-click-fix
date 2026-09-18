@@ -4,7 +4,7 @@
         "description": "The display name for the extension."
     },
     "extension_description": {
-        "message": "Fix Safari triple-click selection by removing synthetic trailing newlines from copied text and repainting paragraph highlights to follow the actual text.",
+        "message": "Triple-click to select one visual line in Safari, with text-aligned highlights and conservative trailing-newline copy cleanup.",
         "description": "Description of what the extension does."
     }
 }

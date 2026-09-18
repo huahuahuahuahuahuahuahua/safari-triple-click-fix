@@ -1,0 +1,104 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Triple Click Fix — Safari line selection regression</title>
+<style>
+body { font: 16px system-ui; margin: 24px; }
+.sample { font: 20px/32px monospace; width: 20ch; word-break: break-all; margin: 12px 0; }
+#scroll { width: 20ch; overflow: auto; }
+#scroll .sample { width: 60ch; white-space: pre; }
+#results { white-space: pre-wrap; font: 13px monospace; }
+#selection { position: fixed; top: 12px; right: 12px; width: 380px; background: #eee; color: #111; padding: 12px; }
+</style>
+<h1>Safari visual line selection</h1>
+<button id="run">Run regression checks</button>
+<pre id="results">Not run</pre>
+<output id="selection">Triple-click any sample to inspect the selected text.</output>
+<div id="wrap" class="sample">AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFF</div>
+<div id="inline" class="sample">AAAAAAAAAA<strong>BBBBBBBBBBCCCCCCCCCC</strong><a href="#inline">DDDDDDDDDD</a>EEEEEEEEEEFFFFFFFFFF</div>
+<div id="br" class="sample">FIRST LINE<br>SECOND LINE<br>THIRD LINE</div>
+<pre id="pre" class="sample">FIRST LINE
+SECOND LINE
+THIRD LINE</pre>
+<div id="chinese" class="sample">第一行中文内容测试<br>第二行中文内容测试<br>第三行中文内容测试</div>
+<div id="scroll"><div class="sample">LEFT0123456789 MIDDLE0123456789 RIGHT0123456789</div></div>
+<div id="editable" class="sample" contenteditable="true">EDITABLE FIRST LINE<br>EDITABLE SECOND LINE</div>
+<textarea id="textarea">Editable textarea first line
+Editable textarea second line</textarea>
+<script src="../triple-click-fix Extension/Resources/selection-model.js"></script>
+<script src="../triple-click-fix Extension/Resources/copy-sanitizer.js"></script>
+<script src="../triple-click-fix Extension/Resources/line-selector.js"></script>
+<script src="../triple-click-fix Extension/Resources/selection-renderer.js"></script>
+<link rel="stylesheet" href="../triple-click-fix Extension/Resources/selection-fix.css">
+<script>
+document.addEventListener('selectionchange', () => {
+    document.querySelector('#selection').textContent = 'Selected: ' + JSON.stringify(getSelection().toString());
+});
+function textNodeAt(element, offset) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+        if (offset < node.length) return [node, offset];
+        offset -= node.length;
+    }
+    throw new Error('Offset outside sample');
+}
+function clickCharacter(id, offset, options = {}) {
+    const element = document.getElementById(id);
+    element.scrollIntoView({block: 'center'});
+    const [node, index] = textNodeAt(element, offset);
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + 1);
+    const rect = range.getBoundingClientRect();
+    const x = rect.left + rect.width * (options.edge ?? 0.4);
+    const y = rect.top + rect.height / 2;
+    const event = new MouseEvent('mousedown', {
+        bubbles: true, cancelable: true, detail: 3, button: 0,
+        clientX: x, clientY: y, ...options
+    });
+    (document.elementFromPoint(x, y) || element).dispatchEvent(event);
+    return event.defaultPrevented;
+}
+document.getElementById('run').onclick = () => {
+    const results = [];
+    function check(name, fn) {
+        try { fn(); results.push('PASS ' + name); }
+        catch (error) { results.push('FAIL ' + name + ': ' + error.message); }
+    }
+    function line(id, offset, expected, options) {
+        if (!clickCharacter(id, offset, options)) throw new Error('Default not cancelled');
+        const actual = getSelection().toString();
+        if (actual !== expected) throw new Error(JSON.stringify({expected, actual}));
+    }
+    for (const id of ['wrap', 'inline']) {
+        check(id + ' first line', () => line(id, 5, 'AAAAAAAAAABBBBBBBBBB'));
+        check(id + ' middle line', () => line(id, 25, 'CCCCCCCCCCDDDDDDDDDD'));
+        check(id + ' last line', () => line(id, 45, 'EEEEEEEEEEFFFFFFFFFF'));
+        check(id + ' soft-wrap start', () => line(id, 20, 'CCCCCCCCCCDDDDDDDDDD', {edge: 0.05}));
+        check(id + ' soft-wrap end', () => line(id, 39, 'CCCCCCCCCCDDDDDDDDDD', {edge: 0.95}));
+    }
+    check('explicit BR', () => line('br', 13, 'SECOND LINE'));
+    check('pre newline', () => line('pre', 14, 'SECOND LINE'));
+    check('Chinese line', () => line('chinese', 13, '第二行中文内容测试'));
+    check('horizontal scroll', () => {
+        document.getElementById('scroll').scrollLeft = 200;
+        line('scroll', 23, 'LEFT0123456789 MIDDLE0123456789 RIGHT0123456789');
+    });
+    for (const [name, id, options] of [
+        ['single click', 'wrap', {detail: 1}],
+        ['double click', 'wrap', {detail: 2}],
+        ['right click', 'wrap', {button: 2}],
+        ['shift click', 'wrap', {shiftKey: true}],
+        ['editable', 'editable', {}]
+    ]) {
+        check(name + ' untouched', () => {
+            const before = getSelection().toString();
+            if (clickCharacter(id, 5, options)) throw new Error('Unexpected cancellation');
+            if (getSelection().toString() !== before) throw new Error('Selection changed');
+        });
+    }
+    getSelection().removeAllRanges();
+    document.getElementById('results').textContent = results.join('\n') + '\n' + results.filter(x => x.startsWith('PASS')).length + '/' + results.length + ' passed';
+    window.scrollTo(0, 0);
+};
+</script>

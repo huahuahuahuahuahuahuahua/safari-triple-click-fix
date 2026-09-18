@@ -1,29 +1,23 @@
 # Safari Triple Click Fix
 
-A macOS Safari Web Extension that fixes two Safari-specific problems caused by
-triple-click paragraph selection.
-
-## Problems
-
-On macOS Safari, triple-clicking a paragraph can produce two unexpected
-results:
-
-1. The copied plain text can end with an extra newline or blank line, even
-   though the visible paragraph does not contain an explicit line break.
-2. The blue selection highlight can extend across the full width of the
-   content block, including margins and empty space, while the actual selected
-   text is narrower.
-
-Chrome and Edge do not show the same rendering behavior on the same pages.
-The DOM `Selection` and `Range` can be correct while Safari's visual highlight
-still paints a much larger block.
+A macOS Safari Web Extension that makes triple-click select the visual line
+under the pointer, including a single line within a wrapped paragraph.
 
 ## Solution
 
-The extension does not reimplement Safari's triple-click selection logic and
-does not replace the native `Selection` or `Range`.
+### Visual line selection
 
-It applies two narrowly scoped fixes:
+`line-selector.js` handles the third primary-button mousedown. It locates the
+caret under the pointer and uses WebKit's `Selection.modify` with
+`lineboundary` to select that rendered line, then cancels Safari's default
+paragraph selection. It adjusts ambiguous soft-wrap endpoints so clicking the
+last glyph does not select the next line.
+
+This changes the actual native selection, so copying uses the same selected
+line. It handles automatic wrapping, inline markup, and explicit line breaks.
+Inputs, textareas, contenteditable surfaces, modified clicks, and ordinary
+single/double clicks retain native behavior. If the required selection APIs
+are unavailable or no line can be selected, Safari handles the click normally.
 
 ### 1. Plain-text copy cleanup
 
@@ -69,6 +63,7 @@ triple-click-fix/
     └── Resources/
         ├── manifest.json
         ├── selection-model.js
+        ├── line-selector.js
         ├── copy-sanitizer.js
         ├── selection-renderer.js
         ├── selection-fix.css
@@ -199,9 +194,10 @@ must be rebuilt and re-signed through the release process when required.
 4. Grant website access. To apply the fix everywhere, allow access on all
    websites.
 5. Reload any already-open pages.
-6. Triple-click a paragraph and verify:
-   - the highlight follows the selected text;
-   - copying the paragraph does not append a synthetic blank line.
+6. Triple-click a line within a wrapped paragraph and verify:
+   - only the clicked visual line is selected and copied;
+   - the highlight follows the selected text while scrolling;
+   - copying does not append a synthetic blank line.
 
 The container App only registers and manages the Safari extension. The
 extension itself runs inside Safari's extension process.
@@ -210,8 +206,9 @@ extension itself runs inside Safari's extension process.
 
 - The extension is designed for macOS Safari and does not change iOS or iPadOS
   Safari.
-- The native selection is preserved. The extension only adjusts clipboard
-  plain text and the visual highlight layer.
+- Triple-click intentionally changes the native selection to one visual line.
+  A line means the rendered row at the current window width and zoom, not the
+  entire paragraph or the text between two newline characters.
 - The copy cleanup is deliberately conservative. If the extension cannot prove
   that a trailing newline is synthetic, it leaves the clipboard unchanged.
 - The renderer excludes inputs, textareas, selects, and contenteditable
@@ -219,6 +216,13 @@ extension itself runs inside Safari's extension process.
 - Custom highlight painting depends on the CSS Custom Highlight API. If the
   API is unavailable or registration fails, Safari's native selection
   rendering is used.
+
+## Regression checks
+
+Serve the repository locally and open `tests/line-selection.html` in Safari.
+Click **Run regression checks**. The page exercises actual WebKit caret and
+line-boundary APIs using synthetic mousedown events; also triple-click the
+samples manually to check Safari's native event/default-action sequence.
 
 ## License
 
