@@ -42,10 +42,14 @@ elements, editable fields, and the HTML clipboard flavor.
 
 ### 2. Selection highlight repaint
 
-`selection-renderer.js` hides Safari's native selection background and draws a
-custom highlight from the actual `Range.getClientRects()` geometry. This keeps
-the highlight aligned with the selected text instead of the surrounding
-block-level box.
+`selection-renderer.js` uses the browser's CSS Custom Highlight API. It
+registers Safari's native selection ranges with `CSS.highlights`, while
+`selection-fix.css` suppresses the native `::selection` background and styles
+the custom `::highlight(...)` layer.
+
+Because the browser owns the custom highlight, it follows text through normal
+scrolling, nested horizontal scroll containers, zooming, and layout updates
+without manual coordinate synchronization.
 
 If the custom highlight cannot be produced, the extension falls back to the
 native Safari rendering rather than hiding the selection.
@@ -212,8 +216,9 @@ extension itself runs inside Safari's extension process.
   that a trailing newline is synthetic, it leaves the clipboard unchanged.
 - The renderer excludes inputs, textareas, selects, and contenteditable
   elements.
-- Custom highlight painting depends on `Range.getClientRects()`; if valid
-  rectangles are unavailable, Safari's native selection rendering is used.
+- Custom highlight painting depends on the CSS Custom Highlight API. If the
+  API is unavailable or registration fails, Safari's native selection
+  rendering is used.
 
 ## License
 

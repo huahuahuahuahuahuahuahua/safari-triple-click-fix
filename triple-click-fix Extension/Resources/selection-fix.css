@@ -1,10 +1,22 @@
-html.__triple-click-fix-ready:not(.__triple-click-fix-native) ::selection {
+html.__triple-click-fix-ready ::selection {
     background-color: transparent !important;
+    color: inherit !important;
 }
 
-html.__triple-click-fix-ready:not(.__triple-click-fix-native) input::selection,
-html.__triple-click-fix-ready:not(.__triple-click-fix-native) textarea::selection,
-html.__triple-click-fix-ready:not(.__triple-click-fix-native) select::selection,
-html.__triple-click-fix-ready:not(.__triple-click-fix-native) [contenteditable]::selection {
-    background-color: revert !important;
+::highlight(triple-click-fix-highlight) {
+    background-color: rgba(0, 98, 210, 0.58);
+    color: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+    ::highlight(triple-click-fix-highlight) {
+        background-color: rgba(0, 112, 225, 0.62);
+    }
+}
+
+@media (forced-colors: active) {
+    ::highlight(triple-click-fix-highlight) {
+        background-color: Highlight;
+        color: HighlightText;
+    }
 }
